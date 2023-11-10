@@ -481,39 +481,62 @@ def write_json(new_data, category, filename='broken.json'):
         file.seek(0)
         json.dump(file_data, file, indent = 4)
      
-def read_json(filename='broken.json'):
+def read_json(filename):
     with open(filename, 'r') as file:
         data = json.load(file)
         return data
 
+def find_broken_cipher(cipher):
+    brokenCiphers = read_json("broken.json")["brokenCiphers"]
+    for brokenCipher in brokenCiphers:
+        if brokenCipher["cipher"] == cipher:
+            return brokenCipher
+    return False
+
+def get_matching_ciphers(cipher):
+    candidateCiphers = read_json("broken.json")["candidateCiphers"]
+    matching_ciphers = []
+    for candidateCipher in candidateCiphers:
+        if candidateCipher["cipher"] == cipher:
+            matching_ciphers.append(candidateCipher)
+    return matching_ciphers
+
 def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
+    # Check if the cipher has been brute-forced before and get the last key used
     binary = find_binary(cipher)
     if binary == -1:
+        # If the cipher has not been brute-forced before, start from the beginning or from the last key stopped at
         binary = b
 
-    brokenCiphers = read_json("broken.json")["brokenCiphers"]
-    for borkenCipher in brokenCiphers:
-        if borkenCipher["cipher"] == cipher:
-            print("Cipher already broken")
-            print("Key in ASCII:", borkenCipher["key"])
-            print("Deciphered text:", borkenCipher["plainText"])
-            return
+    # Check if the cipher has already been broken
+    brokenCipher = find_broken_cipher(cipher)
+    if brokenCipher:
+        print("Cipher already broken")
+        print("Key in ASCII:", brokenCipher["key"])
+        print("Deciphered text:", brokenCipher["plainText"])
+        return
     
+    # Check if the cipher has already been tried before and has candidate plain texts
     if not ignoreJSON:
         candidateCiphers = read_json("broken.json")["candidateCiphers"]
-        matchingCiphers = []
-        for candidateCipher in candidateCiphers:
-            if candidateCipher["cipher"] == cipher:
-                matchingCiphers.append(candidateCipher)
+        matchingCiphers = get_matching_ciphers(cipher)
     
         if len(matchingCiphers) > 0:
+            # Display the candidate plain texts
             print("Found", len(matchingCiphers), "candidate deciphered texts:")
             for matchingCipher in matchingCiphers:
                 print("Key in ASCII:", matchingCipher["key"])
                 print("Deciphered text:", matchingCipher["plainText"])
+            
             found = input("Is the plain text you are looking for in the above list? (y/n): ")
             if found == "y":
+                print("Leave blank to exit")
                 plainText = input("Enter the found plain text to move it to broken ciphers list: ")
+                if plainText == "":
+                    print("\nExiting brute-force mode...")
+                    save_last_used_binary(cipher, binary)
+                    return
+
                 bad_input = True
                 while bad_input:
                     # Move the cipher from candidateCiphers to brokenCiphers

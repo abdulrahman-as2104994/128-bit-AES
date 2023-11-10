@@ -1,4 +1,51 @@
 {
-    "brokenCiphers": [],
+    "brokenCiphers": [
+        {
+            "cipher": "dd930f1447e1307c410b35ecc9a7f4f1",
+            "key": "a",
+            "hexKey": [
+                "0x61",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0"
+            ],
+            "plainText": "hello"
+        },
+        {
+            "cipher": "29a59f90c1e07c6e64a942b5e2a8ff3a",
+            "key": "ab",
+            "hexKey": [
+                "0x61",
+                "0x62",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0"
+            ],
+            "plainText": "hello"
+        }
+    ],
     "candidateCiphers": []
 }
