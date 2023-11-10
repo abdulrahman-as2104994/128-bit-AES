@@ -462,7 +462,6 @@ def decrypt(cipher, key):
     print("\nDeciphered text with padding:\n", deciphered_text)
     deciphered_text = removePadding(deciphered_text)
 
-    clipboard.copy(deciphered_text)
     return deciphered_text
 
 def override_json(new_data, category, filename='broken.json'):
@@ -487,8 +486,8 @@ def read_json(filename='broken.json'):
         data = json.load(file)
         return data
 
-def brute_force(cipher, plain_text=""):
-    binary = 0
+def brute_force(cipher, plain_text="", ignoreJSON=False, binary=0):
+    binary = binary
     brokenCiphers = read_json("broken.json")["brokenCiphers"]
     for borkenCipher in brokenCiphers:
         if borkenCipher["cipher"] == cipher:
@@ -496,37 +495,52 @@ def brute_force(cipher, plain_text=""):
             print("Key in ASCII:", borkenCipher["key"])
             print("Deciphered text:", borkenCipher["plainText"])
             return
+    if not ignoreJSON:
+        candidateCiphers = read_json("broken.json")["candidateCiphers"]
+        matchingCiphers = []
+        for candidateCipher in candidateCiphers:
+            if candidateCipher["cipher"] == cipher:
+                matchingCiphers.append(candidateCipher)
     
-    candidateCiphers = read_json("broken.json")["candidateCiphers"]
-    matchingCiphers = []
-    for candidateCipher in candidateCiphers:
-        if candidateCipher["cipher"] == cipher:
-            matchingCiphers.append(candidateCipher)
-    
-    if len(matchingCiphers) > 0:
-        print("Found", len(matchingCiphers), "candidate deciphered texts:")
-        for matchingCipher in matchingCiphers:
-            print("Key in ASCII:", matchingCipher["key"])
-            print("Deciphered text:", matchingCipher["plainText"])
-        found = input("Is the plain text you are looking for in the above list? (y/n): ")
-        if found == "y":
-            plainText = input("Enter the found plain text to move it to broken ciphers list: ")
-            # Move the cipher from candidateCiphers to brokenCiphers
+        if len(matchingCiphers) > 0:
+            print("Found", len(matchingCiphers), "candidate deciphered texts:")
             for matchingCipher in matchingCiphers:
-                candidateCiphers.remove(matchingCipher)
-                if matchingCipher["plainText"] == plainText:
-                    write_json(matchingCipher, "brokenCiphers")
-            override_json(candidateCiphers, "candidateCiphers")
-            return
-        elif found == "n":
-            print("Continuing the brute-force after last found candidate key ...")
-            hexKey = matchingCiphers[-1]["hexKey"]
-            print("Last found candidate key:", hexKey)
-            binary = int("".join([bin(int(hexKey[i], 16))[2:].zfill(8) for i in range(len(hexKey)-1, -1, -1)]), 2)
-        else:
-            print("Invalid choice!")
-            return
+                print("Key in ASCII:", matchingCipher["key"])
+                print("Deciphered text:", matchingCipher["plainText"])
+            found = input("Is the plain text you are looking for in the above list? (y/n): ")
+            if found == "y":
+                plainText = input("Enter the found plain text to move it to broken ciphers list: ")
+                bad_input = True
+                while bad_input:
+                    # Move the cipher from candidateCiphers to brokenCiphers
+                    for matchingCipher in matchingCiphers:
+                        if matchingCipher["plainText"] == plainText:
+                            write_json(matchingCipher, "brokenCiphers")
+                            bad_input = False
+                    if bad_input:
+                        plainText = input("Invalid plain text! Enter the found plain text to move it to broken ciphers list: ")
+                        print("ctrl-c to stop the brute-force")
+
+                # Remove the ciphers from candidateCiphers
+                data = read_json("broken.json")
+                candidateCiphers = data["candidateCiphers"]
+                for matchingCipher in matchingCiphers:
+                    candidateCiphers.remove(matchingCipher)
+                override_json(candidateCiphers, "candidateCiphers")
+                return
+            elif found == "n":
+                print("Continuing the brute-force after last found candidate key ...")
+                hexKey = matchingCiphers[-1]["hexKey"]
+                print("Last found candidate key:", hexKey)
+                binary = int("".join([bin(int(hexKey[i], 16))[2:].zfill(8) for i in range(len(hexKey)-1, -1, -1)]), 2)
+            else:
+                print("Invalid choice!")
+                return
+        
     time.sleep(3)
+
+    matchingCiphers = []
+
     try:
         for i in range(binary, 2**128):
             binKey = bin(binary)[2:].zfill(128)
@@ -558,6 +572,67 @@ def brute_force(cipher, plain_text=""):
                 write_json({"cipher": cipher, "key": key, "hexKey": hexKey, "plainText": deciphered_text}, "candidateCiphers")
                 time.sleep(2)
             binary += 1
+            print(binary)
     except KeyboardInterrupt:
         print("\nStopping the brute-force...")
         # Show candidate ciphers
+        print("Showing candidate ciphers...\n")
+        data = read_json("broken.json")
+        candidateCiphers = data["candidateCiphers"]
+        matchingCiphers = []
+        for candidateCipher in candidateCiphers:
+            if candidateCipher["cipher"] == cipher:
+                matchingCiphers.append(candidateCipher)
+        print("Found", len(matchingCiphers), "candidate deciphered texts")
+        if len(matchingCiphers) > 0:
+            for matchingCipher in matchingCiphers:
+                print("Key in ASCII:", matchingCipher["key"])
+                print("Deciphered text:", matchingCipher["plainText"])
+                print()
+            found = input("Is the plain text you are looking for in the above list? (y/n): ")
+            if found == "y":
+                plainText = input("Enter the found plain text to move it to broken ciphers list: ")
+                bad_input = True
+                while bad_input:
+                    # Move the cipher from candidateCiphers to brokenCiphers
+                    for matchingCipher in matchingCiphers:
+                        if matchingCipher["plainText"] == plainText:
+                            write_json(matchingCipher, "brokenCiphers")
+                            bad_input = False
+                            break
+                    if bad_input:
+                        plainText = input("Invalid plain text! Enter the found plain text to move it to broken ciphers list: ")
+                        print("ctrl-c to stop the brute-force")
+                # Remove the ciphers from candidateCiphers
+                data = read_json("broken.json")
+                candidateCiphers = data["candidateCiphers"]
+                for matchingCipher in matchingCiphers:
+                    candidateCiphers.remove(matchingCipher)
+                override_json(candidateCiphers, "candidateCiphers")
+                return
+            elif found == "n":
+                cont = input("Do you wish to conteinue the brute-force? (y/n): ")
+                if cont.strip().lower() == "y":
+                    print("Continuing the brute-force after last used key ...")
+                    brute_force(cipher, ignoreJSON=True, binary=binary)
+                else:
+                    return
+            else:
+                print("Invalid choice!")
+                return
+        elif len(matchingCiphers) == 0:
+            cont = input("Do you wish to conteinue the brute-force? (y/n): ")
+            if cont.strip().lower() == "y":
+                print("Continuing the brute-force after last used key ...")
+                brute_force(cipher, ignoreJSON=True, binary=binary)
+            else:
+                return
+
+
+def show_broken_ciphers():
+    brokenCiphers = read_json("broken.json")["brokenCiphers"]
+    for borkenCipher in brokenCiphers:
+        print("Cipher:", borkenCipher["cipher"])
+        print("Key in ASCII:", borkenCipher["key"])
+        print("Deciphered text:", borkenCipher["plainText"])
+        print()
