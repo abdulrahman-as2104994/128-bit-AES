@@ -19,7 +19,7 @@ while running:
         cipher = input("Enter the cipher text to be decrypted: ")
         key = input("\nEnter the 128-bit key used for encryption: ")
         decipher = decrypt(cipher, key)
-        print("\nDeciphered text (Copied to clipboard):\n", decipher)
+        print("\nDeciphered text: \n", decipher)
     elif choice == "3":
         cipher = input("Enter the cipher text to be brute-forced: ")
         have = input("Do you have any idea about the plain text? (y/n): ")

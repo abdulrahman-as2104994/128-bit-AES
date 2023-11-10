@@ -1,4 +1,5 @@
 import json
+import sys
 import time
 import clipboard
 
@@ -446,7 +447,7 @@ def generate_subkeys(KHexList):
         for j in range(4):
             nextCol.append(hex(int(all_sub_keys_columns[i][j], 16) ^ int(all_sub_keys_columns[i+3][j], 16)))
 
-        round_number+=1
+        round_number += 1
     
     return all_sub_keys_columns
 
@@ -690,6 +691,7 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
         print("Cipher already broken")
         print("Key in ASCII:", brokenCipher["key"])
         print("Deciphered text:", brokenCipher["plainText"])
+        input("Press enter to continue...")
         return
     
     # Check if the cipher has already been tried before and has candidate plain texts
@@ -711,6 +713,7 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
                     remove_candidate_ciphers(matchingCiphers)
                     # Remove the cipher from lastTriedBinary
                     remove_key_history(cipher)
+                input("Press enter to continue...")
                 return
             elif found == "n":
                 print("Continuing the brute-force after last tried key for this cipher...")
@@ -722,6 +725,7 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
             else:
                 print("Invalid choice!")
                 save_last_used_binary(cipher, binary)
+                input("Press enter to continue...")
                 return
         
     time.sleep(2)
@@ -733,6 +737,7 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
             hexKey = binarykey_to_hexkey(binary)
             print("Trying key:", hexKey)
             deciphered_text = decrypt(cipher, hexKey)
+
             if plain_text != "":
                 if deciphered_text == plain_text:
                     key = hexkey_to_char(hexKey)
@@ -754,7 +759,8 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
                     # Remove the cipher from lastTriedBinary
                     remove_key_history(cipher)
 
-                    break
+                    input("Press enter to continue...")
+                    return
                     
             elif bytes(deciphered_text, "utf-8").isascii():
                 key = hexkey_to_char(hexKey)
@@ -770,7 +776,7 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
                 write_json({"cipher": cipher, "key": key, "hexKey": hexKey, "plainText": deciphered_text}, "candidateCiphers")
 
                 time.sleep(2)   
-                         
+
             binary += 1
             print("Iteration:", binary)
 
@@ -796,6 +802,7 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
                         remove_candidate_ciphers(matchingCiphers)
                         # Remove the cipher from lastTriedBinary
                         remove_key_history(cipher)
+                    input("Press enter to continue...")
                     return
                 elif found == "n":
                     cont = input("Do you wish to continue the brute-force? (y/n): ")
@@ -803,10 +810,12 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
                         print("Continuing the brute-force after last used key ...")
                     else:
                         save_last_used_binary(cipher, binary)
+                        input("Press enter to continue...")
                         return
                 else:
                     print("Invalid choice!")
                     save_last_used_binary(cipher, binary)
+                    input("Press enter to continue...")
                     return
             
             elif len(matchingCiphers) == 0:
@@ -815,4 +824,5 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
                     print("Continuing the brute-force after last used key ...")
                 else:
                     save_last_used_binary(cipher, binary)
+                    input("Press enter to continue...")
                     return
