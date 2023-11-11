@@ -19,13 +19,7 @@ while running:
     elif choice == "2":
         cipher = input("Enter the cipher text to be decrypted: ")
         key = input("Enter the 128-bit key used for encryption: ")
-        print_long_line()
         decipher = decrypt(cipher, key)
-        print()
-        print_long_line()
-        print("Deciphered text:", decipher)
-        print_long_line()
-
     elif choice == "3":
         cipher = input("Enter the cipher text to be brute-forced: ")
         have = input("Do you have any idea about the plain text? (y/n): ")
@@ -44,7 +38,9 @@ while running:
         print("2. Show candidate plain texts data")
         print("3. Show used keys history data")
         print("4. Exit")
+        print_long_line()
         choice = input("Enter your choice: ")
+        print_long_line()
         if choice == "1":
             show_broken_ciphers()
         elif choice == "2":
@@ -56,28 +52,39 @@ while running:
         else:
             print("Invalid choice!")
     elif choice == "5":
-        print("************************************")
-        print("WARINING! THIS STEP IS IRREVERSIBLE!")
-        print("************************************")
         print("1. Clear broken ciphers data")
         print("2. Clear candidate plain texts data")
         print("3. Clear used keys history data")
         print("4. Clear all data")
         print("5. Exit")
+        print_long_line()
         choice = input("Enter your choice: ")
+        print_long_line()
         if choice == "1":
+            print("************************************************************************")
+            print("                  WARINING! THIS STEP IS IRREVERSIBLE!")
+            print("************************************************************************")
             sure = input("Are you sure you want to clear all broken ciphers data? (y/n): ")
             if sure == "y":
                 clear_broken_ciphers()
         elif choice == "2":
+            print("************************************************************************")
+            print("                  WARINING! THIS STEP IS IRREVERSIBLE!")
+            print("************************************************************************")
             sure = input("Are you sure you want to clear all candidate plain texts data? (y/n): ")
             if sure == "y":
                 clear_candidate_plain_texts()
         elif choice == "3":
+            print("************************************************************************")
+            print("                  WARINING! THIS STEP IS IRREVERSIBLE!")
+            print("************************************************************************")
             sure = input("Are you sure you want to clear all used keys history data? (y/n): ")
             if sure == "y":
                 clear_used_keys_history()
         elif choice == "4":
+            print("************************************************************************")
+            print("                  WARINING! THIS STEP IS IRREVERSIBLE!")
+            print("************************************************************************")
             sure = input("Are you sure you want to clear all data? (y/n): ")
             if sure == "y":
                 clear_all_data()
