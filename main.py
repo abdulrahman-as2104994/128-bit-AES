@@ -47,8 +47,8 @@ while running:
             print("ctrl-c to stop the brute-force")
             brute_force(cipher, plain_text)
         elif have == "n":
-            print("ctrl-c to stop the brute-force")
             print("It is not guaranteed that you will get the correct plain text (ASCII characters only)")
+            print("ctrl-c to stop the brute-force")
             brute_force(cipher)
         else:
             print("Invalid choice!")

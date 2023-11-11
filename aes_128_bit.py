@@ -49,6 +49,12 @@ inverse_aes_sbox = [
     0x17, 0x2B, 0x04, 0x7E, 0xBA, 0x77, 0xD6, 0x26, 0xE1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0C, 0x7D,
 ]
 
+inverse_aes_sbox_table = []
+for i in range(16):
+    inverse_aes_sbox_table.append([])
+    for j in range(16):
+        inverse_aes_sbox_table[i].append(hex(inverse_aes_sbox[i*16+j]))
+
 # Each list is a column, 10 columns for 10 rounds
 round_constants = [
     [0x01, 0x00, 0x00, 0x00],
@@ -247,6 +253,8 @@ def save_last_used_binary(cipher, binary):
         json.dump(data, f, indent=4)
         f.seek(0)
         f.close()
+    
+    print("Saved last used binary for cipher successfully")
 
 def find_binary(cipher):
     with open("lastTriedBinary.json", "r") as f:
@@ -379,6 +387,7 @@ def move_to_broken(cipher, binary, matchingCiphers):
             if matchingCipher["plainText"] == plainText:
                 write_json(matchingCipher, "brokenCiphers")
                 bad_input = False
+                print("Saved to broken ciphers list successfully!")
         if bad_input:
             print("Invalid plain text!")
     return True
@@ -735,6 +744,7 @@ def encrypt(plainText, key):
 
     return cipher
 
+
 def decrypt(cipher, key):
     ### DECIPHERING ###
     # Do the reverse of the ciphering process
@@ -769,6 +779,9 @@ def decrypt(cipher, key):
     print("3. Rotate rows")
     print("4. Substitution from inverse S-Box")
 
+    print_short_line()
+    print("Inverse S-Box to be used:")
+    print(tb.tabulate(inverse_aes_sbox_table, tablefmt="grid"))
     print_short_line()
     print("Inverse standard matrix to be used:")
     print(tb.tabulate(inverse_standard_matrix, tablefmt="grid"))
@@ -890,6 +903,188 @@ def decrypt(cipher, key):
     return deciphered_text
 
 
+def removePadding_noprint(msg):
+    # Need to check if padding has been done
+    try:
+        padding_length = int(msg[-1], 16) + 1
+    except ValueError:
+        return msg
+
+    # Count the number of padding characters
+    count = 0
+    for char in range(padding_length - 1):
+        if msg[-(char+2)] == "0":
+            count += 1
+        else:
+            break
+    if count == (padding_length - 1):
+        while padding_length > 0:
+            msg = msg[:-1]
+            padding_length -= 1
+    return msg
+
+
+def generate_subkeys_noprint(KHexList):
+    # put 44 empty lists inside subkeys44, each 4 lists is one subkey, each list is one column
+    all_sub_keys_columns = [
+        [KHexList[0], KHexList[1], KHexList[2], KHexList[3]],
+        [KHexList[4], KHexList[5], KHexList[6], KHexList[7]],
+        [KHexList[8], KHexList[9], KHexList[10], KHexList[11]],
+        [KHexList[12], KHexList[13], KHexList[14], KHexList[15]],
+        [],[],[],[],
+        [],[],[],[],
+        [],[],[],[],
+        [],[],[],[],
+        [],[],[],[],
+        [],[],[],[],
+        [],[],[],[],
+        [],[],[],[],
+        [],[],[],[],
+        [],[],[],[],
+    ]
+
+    # Subkeys generation #
+    # The round_number is used to identify the round constant to use
+    round_number = 1
+
+    # Range is from 3 to 43, step is 4, because we already have the first 4 subkeys
+    # In every loop, 4 subkeys are generated, so we need to loop 10 times to generate 40 subkeys
+    for i in range(3, 43, 4):
+        # First select the column to rotate
+        colToRotate = all_sub_keys_columns[i]
+
+        # Then rotate it
+        rotatedCol = colToRotate[1:] + colToRotate[:1]
+
+        # Then substitute new values according to the sbox
+        substitutionCol = []
+        for j in range(4):
+            substitutionCol.append(hex(aes_sbox[int(rotatedCol[j], 16)]))
+
+        # Get the round constant
+        rConCol = round_constants[round_number-1]
+
+        # calculate g(col)
+        gOfCol = []
+        for j in range(4):
+            gOfCol.append(hex(int(substitutionCol[j], 16) ^ rConCol[j]))
+
+        # Get the 4 new subkeys
+        nextCol = all_sub_keys_columns[i+1]
+        for j in range(4):
+            nextCol.append(hex(int(all_sub_keys_columns[i-3][j], 16) ^ int(gOfCol[j], 16)))
+
+        for j in range(3):
+            nextCol = all_sub_keys_columns[i+j+2]
+            for k in range(4):
+                nextCol.append(hex(int(all_sub_keys_columns[i-2+j][k], 16) ^ int(all_sub_keys_columns[i+j+1][k], 16)))
+
+        new_subkeys = all_sub_keys_columns[i+1:i+5]
+
+        round_number += 1
+
+    return all_sub_keys_columns
+
+
+def decrypt_noprint(cipher, key):
+    ### DECIPHERING ###
+    # Do the reverse of the ciphering process
+    if type(key) == str:
+        all_sub_keys_columns = generate_subkeys_noprint(convert_to_128_bit(string_to_hex(key)))
+    elif type(key) == list:
+        # If brute-force is used, the key is already a list of hexs
+        all_sub_keys_columns = generate_subkeys_noprint(key)
+    
+    # Retain the cipher blocks
+    cipher_blocks = []
+    for i in range(0, len(cipher), 2):
+        cipher_blocks.append(hex(int(cipher[i:i+2], 16)))
+    cipher_blocks = [cipher_blocks[i:i+4] for i in range(0, len(cipher_blocks), 4)]
+    cipher_blocks = [cipher_blocks[i:i+4] for i in range(0, len(cipher_blocks), 4)]
+
+    deciphered_blocks = []
+
+    for cipher_block in cipher_blocks:
+        # 10 rounds
+        for round in range(1, 11):
+            # Add round key step starting from the last 4 subkeys 40-43
+            for i in range(4):
+                for j in range(4):
+                    sub_key_index = (11-round)*4 + j
+                    cipher_block[i][j] = hex(int(cipher_block[i][j], 16) ^ int(all_sub_keys_columns[sub_key_index][j], 16))
+
+            # mix columns step
+            if round != 1:
+                # Each list is a column
+                arr = [
+                    [],
+                    [],
+                    [],
+                    []
+                ]
+
+                # Matrix multiplication in GF(2^8) with inverse standard matrix
+                for i in range(4):
+                    for j in range(4):
+                        part1 = gf_2_8_product(int(inverse_standard_matrix[j][0], 16), int(cipher_block[i][0], 16))
+                        part2 = gf_2_8_product(int(inverse_standard_matrix[j][1], 16), int(cipher_block[i][1], 16))
+                        part3 = gf_2_8_product(int(inverse_standard_matrix[j][2], 16), int(cipher_block[i][2], 16))
+                        part4 = gf_2_8_product(int(inverse_standard_matrix[j][3], 16), int(cipher_block[i][3], 16))
+                        r = part1 ^ part2 ^ part3 ^ part4
+                        arr[i].append(hex(r))
+
+                cipher_block = arr
+
+            # change from columns to rows
+            cipher_block_rows = [
+                [],
+                [],
+                [],
+                []
+            ]
+
+            for col in range(4):
+                for row in range(4):
+                    cipher_block_rows[row].append(cipher_block[col][row])
+            
+            # rotate rows to the right instead of left
+            for i in range(1, 4):
+                cipher_block_rows[i] = cipher_block_rows[i][4-i:] + cipher_block_rows[i][:4-i]
+            
+            # change from rows to columns back again
+            cipher_block = [
+                [],
+                [],
+                [],
+                []
+            ]
+
+            for col in range(4):
+                for row in range(4):
+                    cipher_block[col].append(cipher_block_rows[row][col])
+
+            # Substitution from inverse sbox
+            for i in range(4):
+                for j in range(4):
+                    cipher_block[i][j] = hex(inverse_aes_sbox[int(cipher_block[i][j], 16)])
+
+
+        # ADD round key step using subkeys 0-3
+        for i in range(4):
+            for j in range(4):
+                cipher_block[i][j] = hex(int(cipher_block[i][j], 16) ^ int(all_sub_keys_columns[i][j], 16))
+        deciphered_blocks.append(cipher_block)
+
+    # Plain text back again
+    deciphered_text = ""
+    for deciphered_block in deciphered_blocks:
+        for i in range(4):
+            for j in range(4):
+                deciphered_text += chr(int(deciphered_block[i][j], 16))
+
+    deciphered_text = removePadding_noprint(deciphered_text)
+    return deciphered_text
+
 def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
     # Check if the cipher has been brute-forced before and get the last key used
     binary = find_binary(cipher)
@@ -900,10 +1095,13 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
     # Check if the cipher has already been broken
     brokenCipher = find_broken_cipher(cipher)
     if brokenCipher:
+        print()
+        print_long_line()
         print("Cipher already broken")
+        print("Key in hex:", brokenCipher["hexKey"])
         print("Key in ASCII:", brokenCipher["key"])
         print("Deciphered text:", brokenCipher["plainText"])
-        input("Press enter to continue...")
+        print_long_line()
         return
     
     # Check if the cipher has already been tried before and has candidate plain texts
@@ -912,43 +1110,46 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
     
         if len(matchingCiphers) > 0:
             # Display the candidate plain texts
-            print("Found", len(matchingCiphers), "candidate deciphered texts:")
+            print("\nFound", len(matchingCiphers), "candidate deciphered texts:\m")
             for matchingCipher in matchingCiphers:
+                print_short_line()
+                print("Key in hex:", matchingCipher["hexKey"])
                 print("Key in ASCII:", matchingCipher["key"])
                 print("Deciphered text:", matchingCipher["plainText"])
-            
+                print_short_line()
+
             found = input("Is the plain text you are looking for in the above list? (y/n): ")
-            if found == "y":
+            if found.strip().lower() == "y":
                 # Try to move the cipher from candidate to broken
                 if move_to_broken(cipher, binary, matchingCiphers):
                     # Remove the ciphers from candidateCiphers
                     remove_candidate_ciphers(matchingCiphers)
                     # Remove the cipher from lastTriedBinary
                     remove_key_history(cipher)
-                input("Press enter to continue...")
                 return
             elif found == "n":
                 print("Continuing the brute-force after last tried key for this cipher...")
                 binary = find_binary(cipher)
                 if binary == -1:
                     print("No last tried key found for this cipher")
-                    print("Continuing the brute-force after last tried candidate key ...")
+                    print("Continuing the brute-force after last tried candidate plain text key ...")
                     binary = get_last_candidate_key(matchingCiphers)
             else:
                 print("Invalid choice!")
                 save_last_used_binary(cipher, binary)
-                input("Press enter to continue...")
                 return
         
-    time.sleep(2)
+    time.sleep(3)
 
     matchingCiphers = []
 
     for i in range(binary, 2**128):
         try:
             hexKey = binarykey_to_hexkey(binary)
-            print("Trying key:", hexKey)
-            deciphered_text = decrypt(cipher, hexKey)
+            print_long_line()
+            print("Iteration:", binary)
+            print("Trying hex key:", hexKey)
+            deciphered_text = decrypt_noprint(cipher, hexKey)
 
             if plain_text != "":
                 if deciphered_text == plain_text:
@@ -966,50 +1167,55 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
                     # Remove the cipher from lastTriedBinary
                     remove_key_history(cipher)
 
-                    print("-----------------------------------------------------------------------------------------")
+                    
+                    print("\n****************************************Cipher broken successfully!****************************************")
                     print("Key found:", hexKey)
                     print("Key in ASCII:", key)
                     print("Iterations:", binary)
                     print("Deciphered text:", deciphered_text)
                     print("Plain text:", plain_text)
-                    print("-----------------------------------------------------------------------------------------")
-                    input("Press enter to continue...")
+                    print("*************************************************************************************************************")
+                    print("\nCipher saved to broken ciphers list successfully")
 
                     return
                     
             elif bytes(deciphered_text, "utf-8").isascii():
                 key = hexkey_to_char(hexKey)
-                print("-----------------------------------------------------------------------------------------")
+
+                # Save to candidate ciphers
+                write_json({"cipher": cipher, "key": key, "hexKey": hexKey, "plainText": deciphered_text}, "candidateCiphers")
+
+                print("\n****************************************Cipher broken successfully!****************************************")
                 print("Key found:", hexKey)
                 print("Key in ASCII:", key)
                 print("Iterations:", binary)
                 print("Deciphered text:", deciphered_text)
                 print("Plain text:", plain_text)
-                print("-----------------------------------------------------------------------------------------")
+                print("*************************************************************************************************************")    
 
-                # Save to candidate ciphers
-                write_json({"cipher": cipher, "key": key, "hexKey": hexKey, "plainText": deciphered_text}, "candidateCiphers")
+                print("\nPlain text saved to candidate plain texts list successfully")
 
-                time.sleep(2)   
+                time.sleep(5)   
 
             binary += 1
-            print("Iteration:", binary)
 
         except KeyboardInterrupt:
-            print("\nStopping the brute-force...")
+            print("\nStopping the brute-force...\n")
 
             # Show candidate ciphers
-            print("Showing candidate ciphers...\n")
+            print("Showing candidate ciphers:")
             matchingCiphers = get_matching_ciphers(cipher)
-            print("Found", len(matchingCiphers), "candidate deciphered texts")
+            print("\nFound", len(matchingCiphers), "candidate deciphered texts")
 
             if len(matchingCiphers) > 0:
                 for matchingCipher in matchingCiphers:
+                    print_short_line()
+                    print("Key in hex:", matchingCipher["hexKey"])
                     print("Key in ASCII:", matchingCipher["key"])
                     print("Deciphered text:", matchingCipher["plainText"])
-                    print()
+                    print_short_line()
                 
-                found = input("Is the plain text you are looking for in the above list? (y/n): ")
+                found = input("\nIs the plain text you are looking for in the above list? (y/n): ")
                 if found.strip().lower() == "y":
                     # Try to move the cipher from candidate to broken
                     if move_to_broken(cipher, binary, matchingCiphers):
@@ -1017,7 +1223,6 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
                         remove_candidate_ciphers(matchingCiphers)
                         # Remove the cipher from lastTriedBinary
                         remove_key_history(cipher)
-                    input("Press enter to continue...")
                     return
                 elif found == "n":
                     cont = input("Do you wish to continue the brute-force? (y/n): ")
@@ -1025,12 +1230,10 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
                         print("Continuing the brute-force after last used key ...")
                     else:
                         save_last_used_binary(cipher, binary)
-                        input("Press enter to continue...")
                         return
                 else:
                     print("Invalid choice!")
                     save_last_used_binary(cipher, binary)
-                    input("Press enter to continue...")
                     return
             
             elif len(matchingCiphers) == 0:
@@ -1039,5 +1242,4 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
                     print("Continuing the brute-force after last used key ...")
                 else:
                     save_last_used_binary(cipher, binary)
-                    input("Press enter to continue...")
                     return

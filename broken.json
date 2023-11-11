@@ -1,4 +1,28 @@
 {
-    "brokenCiphers": [],
+    "brokenCiphers": [
+        {
+            "cipher": "a8243410c09f6c17c7d6b50dbdbe1fa2",
+            "key": "a",
+            "hexKey": [
+                "0x61",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0"
+            ],
+            "plainText": "omar"
+        }
+    ],
     "candidateCiphers": []
 }
