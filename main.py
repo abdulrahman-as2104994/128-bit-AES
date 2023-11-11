@@ -14,22 +14,41 @@ while running:
     print_long_line()
     if choice == "1":
         plain_text = input("Enter the plain text to be encrypted: ")
+        if plain_text.strip() == "":
+            print("Plain text cannot be empty!")
+            continue
         key = input("Enter a 128-bit key: ")
+        if key.strip() == "":
+            print("Key cannot be empty!")
+            continue
         cipher = encrypt(plain_text, key)
     elif choice == "2":
         cipher = input("Enter the cipher text to be decrypted: ")
+        if cipher.strip() == "":
+            print("Cipher text cannot be empty!")
+            continue
         key = input("Enter the 128-bit key used for encryption: ")
+        if key.strip() == "":
+            print("Key cannot be empty!")
+            continue
         decipher = decrypt(cipher, key)
     elif choice == "3":
+        print("ctrl-c to stop the brute-force")
         cipher = input("Enter the cipher text to be brute-forced: ")
+        if cipher.strip() == "":
+            print("Cipher text cannot be empty!")
+            continue
         have = input("Do you have any idea about the plain text? (y/n): ")
-        if have == "y":
+        if have.lower().strip() == "y":
             plain_text = input("Enter the plain text to be searched for (Case sensative): ")
+            if plain_text.strip() == "":
+                print("Plain text cannot be empty!")
+                continue
             print("ctrl-c to stop the brute-force")
             brute_force(cipher, plain_text)
         elif have == "n":
-            print("It is not guaranteed that you will get the correct plain text (ASCII characters only)")
             print("ctrl-c to stop the brute-force")
+            print("It is not guaranteed that you will get the correct plain text (ASCII characters only)")
             brute_force(cipher)
         else:
             print("Invalid choice!")
