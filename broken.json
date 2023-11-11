@@ -1,28 +1,4 @@
 {
-    "brokenCiphers": [
-        {
-            "cipher": "dd930f1447e1307c410b35ecc9a7f4f1",
-            "key": "a",
-            "hexKey": [
-                "0x61",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0"
-            ],
-            "plainText": "hello"
-        }
-    ],
+    "brokenCiphers": [],
     "candidateCiphers": []
 }

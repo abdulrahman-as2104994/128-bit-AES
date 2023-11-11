@@ -24,6 +24,12 @@ aes_sbox = [
     0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16,
 ]
 
+sbox_table = []
+for i in range(16):
+    sbox_table.append([])
+    for j in range(16):
+        sbox_table[i].append(hex(aes_sbox[i*16+j]))
+
 inverse_aes_sbox = [
     0x52, 0x09, 0x6A, 0xD5, 0x30, 0x36, 0xA5, 0x38, 0xBF, 0x40, 0xA3, 0x9E, 0x81, 0xF3, 0xD7, 0xFB,
     0x7C, 0xE3, 0x39, 0x82, 0x9B, 0x2F, 0xFF, 0x87, 0x34, 0x8E, 0x43, 0x44, 0xC4, 0xDE, 0xE9, 0xCB,
@@ -452,15 +458,25 @@ def generate_subkeys(KHexList):
         [],[],[],[],
         [],[],[],[],
     ]
-    print("Subkeys 0-3:\n", all_sub_keys_columns[:4])
 
+    print("\nS-Box to be used:")
+    print(tb.tabulate(sbox_table, tablefmt="grid"))
+
+    print("\nSubkeys 0-3:")
+    display_matrix(all_sub_keys_columns[:4], 4, "col")
     # Subkeys generation #
     # The round_number is used to identify the round constant to use
     round_number = 1
 
     # Range is from 3 to 43, step is 4, because we already have the first 4 subkeys
     # In every loop, 4 subkeys are generated, so we need to loop 10 times to generate 40 subkeys
-    print("\nGenerating remaining subkeys 4-43...\n")
+    print("\nGenerating remaining subkeys 4-43 in 10 rounds...\n")
+    print("Each round consists of 4 steps:")
+    print("1. Rotate column")
+    print("2. Substitute values from S-Box")
+    print("3. XOR with round constant to calculate g(col)")
+    print("4. XOR with previous column to obtain next subkeys")
+
     for i in range(3, 43, 4):
 
         print_short_line()
@@ -468,7 +484,8 @@ def generate_subkeys(KHexList):
 
         # First select the column to rotate
         colToRotate = all_sub_keys_columns[i]
-        print("\nColumn to rotate:", colToRotate, "at index", i)
+        print("\n1.")
+        print("Column to rotate:", colToRotate, "at index", i)
 
         print("Rotating column...")
 
@@ -476,7 +493,8 @@ def generate_subkeys(KHexList):
         rotatedCol = colToRotate[1:] + colToRotate[:1]
         print("Rotated column:", rotatedCol)
 
-        print("\nSubstituting values from S-BOX...")
+        print("\n2.")
+        print("Substituting values from S-Box...")
 
         # Then substitute new values according to the sbox
         substitutionCol = []
@@ -484,7 +502,8 @@ def generate_subkeys(KHexList):
             substitutionCol.append(hex(aes_sbox[int(rotatedCol[j], 16)]))
         print("Substituted column:", substitutionCol, "at index", i)
 
-        print(f"\nCalculating g(col{i})...")
+        print("\n3.")
+        print(f"Calculating g(col{i})...")
 
         # Get the round constant
         rConCol = round_constants[round_number-1]
@@ -498,7 +517,8 @@ def generate_subkeys(KHexList):
             gOfCol.append(hex(int(substitutionCol[j], 16) ^ rConCol[j]))
         print(f"g(col{i}):", gOfCol, "at index", i)
 
-        print(f"\nGenerating subkeys {i+1}, {i+2}, {i+3}...")
+        print("\n4.")
+        print(f"Generating subkeys {i+1}, {i+2}, {i+3}...")
 
         print(f"\nXORing g(col{i}) with col{i-3} to get subkey{i+1}...")
 
@@ -515,6 +535,12 @@ def generate_subkeys(KHexList):
                 nextCol.append(hex(int(all_sub_keys_columns[i-2+j][k], 16) ^ int(all_sub_keys_columns[i+j+1][k], 16)))
             print(f"Subkey{i+j+2}:", nextCol, "at index", i+j+2)
 
+        new_subkeys = all_sub_keys_columns[i+1:i+5]
+        print("\nSubkeys " + str(i+1) + "-" + str(i+4) + ":")
+        display_matrix(new_subkeys, 4, "col")
+
+        print("\nRound " + str(round_number) + " completed")
+
         round_number += 1
     
     print_long_line()
@@ -526,6 +552,7 @@ def generate_subkeys(KHexList):
 def encrypt(plainText, key):
     ### Padding ###
     print_long_line()
+    print("Starting encryption process...\n")
     print("Step 1: Padding")
     if check_to_pad(plainText):
         plainText = padding(plainText)
@@ -551,21 +578,26 @@ def encrypt(plainText, key):
     print("Step 4: Generating 44 subkeys")
     all_sub_keys_columns = generate_subkeys(KHexList)
 
+    print_long_line()
+    print("Step 5: Splitting plain text into 16-byte blocks")
     # Create message message_blocks
     message_blocks = []
     for i in range(0, len(PTHexList), 16):
         message_blocks.append(PTHexList[i:i+16])
-
+    
     # Cipher blocks
     cipher_blocks = []
 
-    for message_block in message_blocks:
+    for z, message_block in enumerate(message_blocks):
         msg_matrix = [
             [message_block[0], message_block[1], message_block[2], message_block[3]],
             [message_block[4], message_block[5], message_block[6], message_block[7]],
             [message_block[8], message_block[9], message_block[10], message_block[11]],
             [message_block[12], message_block[13], message_block[14], message_block[15]],
         ]
+
+        print(f"\nMessage block {z}:", message_block)
+        display_matrix(msg_matrix, 4, "col")
 
         state_array = [
             [],
@@ -576,18 +608,38 @@ def encrypt(plainText, key):
 
         # phase 2
         # Add round key step using subkeys 0-3
+        print_long_line()
+        print(f"Step 6: XORing subkeys 0-3 with message block {z} to obtain the state matrix")
         for i in range(4):
             for j in range(4):
                 state_array[i].append(hex(int(msg_matrix[i][j], 16) ^ int(all_sub_keys_columns[i][j], 16)))
+        display_matrix(state_array, 4, "col")
+
+        print_long_line()
+        print(f"Step 7: Starting the 10 rounds for message block {z}")
+        print("\nEach round consists of 4 steps:")
+        print("1. Substitution from S-Box")
+        print("2. Rotate rows")
+        print("3. Mix columns")
+        print("4. Add round key")
+
+        print_short_line()
+        print("Standard matrix to be used:")
+        print(tb.tabulate(standard_matrix, tablefmt="grid"))
 
         # The 10 rounds
         for round in range(1, 11):
-
+            print_short_line()
+            print(f"Round number: {round}/10")
+            
             # Substitution from sbox
+            print("\nSubstitution from S-Box into state matrix...")
             for i in range(4):
                 for j in range(4):
                     state_array[i][j] = hex(aes_sbox[int(state_array[i][j], 16)])
-            
+            print("State matrix after substitution:")
+            display_matrix(state_array, 4, "col")
+
             # change from columns to rows
             state_array_rows = [
                 [],
@@ -601,6 +653,7 @@ def encrypt(plainText, key):
                     state_array_rows[row].append(state_array[col][row])
 
             # rotate rows
+            print("\nRotating rows...")
             for i in range(1, 4):
                 state_array_rows[i] = state_array_rows[i][i:] + state_array_rows[i][:i]
 
@@ -615,6 +668,8 @@ def encrypt(plainText, key):
             for col in range(4):
                 for row in range(4):
                     state_array[col].append(state_array_rows[row][col])
+            print("State matrix after row rotation:")
+            display_matrix(state_array, 4, "col")
 
             # mix columns step
             if round != 10:
@@ -627,6 +682,8 @@ def encrypt(plainText, key):
                 ]
 
                 # Matrix multiplication in GF(2^8)
+                print("\nMixing columns...")
+                print("Multiplying state matrix with standard matrix...")
                 for i in range(4):
                     for j in range(4):
                         part1 = gf_2_8_product(int(standard_matrix[j][0], 16), int(state_array[i][0], 16))
@@ -637,22 +694,39 @@ def encrypt(plainText, key):
                         arr[i].append(hex(r))
 
                 state_array = arr
+                print("State matrix after mixing columns:")
+                display_matrix(state_array, 4, "col")
 
             # Add round key step using the next 4 subkeys
+            print("\nAdding round key...")
+            print(f"XORing state matrix with subkeys {round*4} to {round*4+3}...")
             for i in range(4):
                 for j in range(4):
                     sub_key_index = (round)*4 + j
                     state_array[i][j] = hex(int(state_array[i][j], 16) ^ int(all_sub_keys_columns[sub_key_index][j], 16))
-        
+            print("State matrix after adding round key:")
+            display_matrix(state_array, 4, "col")
+
+            print("\nRound", round, "completed")
+            print("Obtained cipher block:")
+            display_matrix(state_array, 4, "col")
+
         cipher_blocks.append(state_array)
 
+    print_long_line()
+    print("Cipher blocks:")
     cipher = ""
     for cipher_block in cipher_blocks:
+        display_matrix(cipher_block, 4, "col")
         for i in range(4):
             for j in range(4):
                 cipher += cipher_block[i][j][2:].zfill(2)
-
+    
     clipboard.copy(cipher)
+    print_long_line()
+    print("Ciphered text (Copied to clipboard):", cipher)
+    print_long_line()
+
     return cipher
 
 def decrypt(cipher, key):

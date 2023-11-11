@@ -16,10 +16,6 @@ while running:
         plain_text = input("Enter the plain text to be encrypted: ")
         key = input("Enter a 128-bit key: ")
         cipher = encrypt(plain_text, key)
-        print_long_line()
-        print("Ciphered text (Copied to clipboard):", cipher)
-        print_long_line()
-    
     elif choice == "2":
         cipher = input("Enter the cipher text to be decrypted: ")
         key = input("Enter the 128-bit key used for encryption: ")
