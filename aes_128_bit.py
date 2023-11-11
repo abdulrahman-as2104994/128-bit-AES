@@ -1,7 +1,9 @@
 import json
+import math
 import sys
 import time
 import clipboard
+import tabulate as tb
 
 aes_sbox = [
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
@@ -71,6 +73,15 @@ inverse_standard_matrix = [
     ['0x0B', '0x0D', '0x09', '0x0E']
 ]
 
+def print_short_line():
+    print("-----------------------------------------------------")
+
+def print_long_line():
+    print("-------------------------------------------------------------------------------------------------------------")
+
+def print_main_header():
+    print("\n------------------------------------128-bit AES Encryption and Decryption------------------------------------")
+
 def byte(x, n=8):
         return format(x, f"0{n}b")
 
@@ -115,6 +126,7 @@ def padding(msg):
     print("Padding...")
     print("Padding length:", padding_length)
     msg += ("0" * (padding_length - 1)) + hex(padding_length - 1)[2:]
+    print("Padded plain text:", msg)
     return msg
 
 def removePadding(msg):
@@ -383,6 +395,44 @@ def get_all_candidate_ciphers():
 def hexkey_to_char(hexKey):
     return "".join([chr(int(value, 16)) for value in hexKey]).replace("\u0000","")
 
+def display_matrix(matrix, num_cols, col_title):
+    all_matrix = []
+    
+    row_count = len(matrix[0])
+    matrix_rows = []
+    for i in range(row_count):
+        matrix_rows.append([])
+
+    count = math.ceil(len(matrix) / num_cols)
+
+    while count > 0:
+        # Convert columns to rows
+        for col in range(num_cols if count > 1 else len(matrix)):
+            for row in range(row_count):
+                matrix_rows[row].append(matrix[col][row])
+        
+        all_matrix.append(matrix_rows)
+
+        # Remove the first num_cols columns
+        matrix = matrix[num_cols:]
+        
+        # reset matrix_rows
+        matrix_rows = []
+        for i in range(row_count):
+            matrix_rows.append([])
+
+        count -= 1
+
+    count = 0
+    for m in all_matrix:
+        headers = []
+        for i in range(len(m[0])):
+            headers.append(col_title + str(count + i))
+            
+        count += len(m[0])
+        
+        print(tb.tabulate(m, headers=headers, tablefmt="fancy_grid"))
+
 
 def generate_subkeys(KHexList):
     # put 44 empty lists inside subkeys44, each 4 lists is one subkey, each list is one column
@@ -402,6 +452,7 @@ def generate_subkeys(KHexList):
         [],[],[],[],
         [],[],[],[],
     ]
+    print("Subkeys 0-3:\n", all_sub_keys_columns[:4])
 
     # Subkeys generation #
     # The round_number is used to identify the round constant to use
@@ -409,66 +460,95 @@ def generate_subkeys(KHexList):
 
     # Range is from 3 to 43, step is 4, because we already have the first 4 subkeys
     # In every loop, 4 subkeys are generated, so we need to loop 10 times to generate 40 subkeys
+    print("\nGenerating remaining subkeys 4-43...\n")
     for i in range(3, 43, 4):
+
+        print_short_line()
+        print("Round number: " + str(round_number) + "/10")
 
         # First select the column to rotate
         colToRotate = all_sub_keys_columns[i]
+        print("\nColumn to rotate:", colToRotate, "at index", i)
+
+        print("Rotating column...")
 
         # Then rotate it
         rotatedCol = colToRotate[1:] + colToRotate[:1]
+        print("Rotated column:", rotatedCol)
+
+        print("\nSubstituting values from S-BOX...")
 
         # Then substitute new values according to the sbox
         substitutionCol = []
         for j in range(4):
             substitutionCol.append(hex(aes_sbox[int(rotatedCol[j], 16)]))
+        print("Substituted column:", substitutionCol, "at index", i)
+
+        print(f"\nCalculating g(col{i})...")
 
         # Get the round constant
         rConCol = round_constants[round_number-1]
+        print("Round constant:", rConCol)
+
+        print(f"XORing substituted column with round constant to get g(col{i})...")
 
         # calculate g(col)
         gOfCol = []
         for j in range(4):
             gOfCol.append(hex(int(substitutionCol[j], 16) ^ rConCol[j]))
+        print(f"g(col{i}):", gOfCol, "at index", i)
 
-        # Get the new subkeys
+        print(f"\nGenerating subkeys {i+1}, {i+2}, {i+3}...")
+
+        print(f"\nXORing g(col{i}) with col{i-3} to get subkey{i+1}...")
+
+        # Get the 4 new subkeys
         nextCol = all_sub_keys_columns[i+1]
         for j in range(4):
             nextCol.append(hex(int(all_sub_keys_columns[i-3][j], 16) ^ int(gOfCol[j], 16)))
+        print(f"Subkey{i+1}:", nextCol, "at index", i+1)
 
-        nextCol = all_sub_keys_columns[i+2]
-        for j in range(4):
-            nextCol.append(hex(int(all_sub_keys_columns[i-2][j], 16) ^ int(all_sub_keys_columns[i+1][j], 16)))
-
-        nextCol = all_sub_keys_columns[i+3]
-        for j in range(4):
-            nextCol.append(hex(int(all_sub_keys_columns[i-1][j], 16) ^ int(all_sub_keys_columns[i+2][j], 16)))
-
-        nextCol = all_sub_keys_columns[i+4]
-        for j in range(4):
-            nextCol.append(hex(int(all_sub_keys_columns[i][j], 16) ^ int(all_sub_keys_columns[i+3][j], 16)))
+        for j in range(3):
+            print(f"\nXORing subkey{i+j+1} with col{i-2+j} to get subkey{i+j+2}...")
+            nextCol = all_sub_keys_columns[i+j+2]
+            for k in range(4):
+                nextCol.append(hex(int(all_sub_keys_columns[i-2+j][k], 16) ^ int(all_sub_keys_columns[i+j+1][k], 16)))
+            print(f"Subkey{i+j+2}:", nextCol, "at index", i+j+2)
 
         round_number += 1
     
+    print_long_line()
+    print("Final Subkeys 0-43:")
+    display_matrix(all_sub_keys_columns, 11, "col")
     return all_sub_keys_columns
+
 
 def encrypt(plainText, key):
     ### Padding ###
+    print_long_line()
+    print("Step 1: Padding")
     if check_to_pad(plainText):
         plainText = padding(plainText)
     else:
         print("No padding needed")
 
+    print_long_line()
     # Convert plain text to hex
+    print("Step 2: Converting plain text to hex")
     PTHexList = string_to_hex(plainText)
-    print("\nPlain text in hex:\n", PTHexList)
+    print("Plain text in hex:", PTHexList)
 
+    print_long_line()
     # If the key is not 128-bit, convert it to a 128-bit key
+    print("Step 3: Convert key to a 128-bit key")
     KHexList = convert_to_128_bit(string_to_hex(key))
-    print("\nKey in hex:\n", KHexList)
+    print("Key in hex:", KHexList)
 
     ### CIPHERING ###
     # phase 1
-
+    # Generate subkeys
+    print_long_line()
+    print("Step 4: Generating 44 subkeys")
     all_sub_keys_columns = generate_subkeys(KHexList)
 
     # Create message message_blocks

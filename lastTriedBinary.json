@@ -1,3 +1,8 @@
 {
-    "ciphers": []
+    "ciphers": [
+        {
+            "cipher": "a0c0ae83f7aa0f7f7c2d7bf3d0d66b7d",
+            "binary": 1974
+        }
+    ]
 }

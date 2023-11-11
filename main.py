@@ -1,14 +1,5 @@
 from aes_128_bit import *
 
-def print_short_line():
-    print("-----------------------------------------------------")
-
-def print_long_line():
-    print("-------------------------------------------------------------------------------------------------------------")
-
-def print_main_header():
-    print("\n------------------------------------128-bit AES Encryption and Decryption------------------------------------")
-
 running = True
 while running:
     print_main_header()
@@ -32,6 +23,7 @@ while running:
     elif choice == "2":
         cipher = input("Enter the cipher text to be decrypted: ")
         key = input("Enter the 128-bit key used for encryption: ")
+        print_long_line()
         decipher = decrypt(cipher, key)
         print()
         print_long_line()
