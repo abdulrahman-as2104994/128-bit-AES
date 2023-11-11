@@ -1,25 +1,43 @@
 from aes_128_bit import *
 
+def print_short_line():
+    print("-----------------------------------------------------")
+
+def print_long_line():
+    print("-------------------------------------------------------------------------------------------------------------")
+
+def print_main_header():
+    print("\n------------------------------------128-bit AES Encryption and Decryption------------------------------------")
+
 running = True
 while running:
-    print("\n------------------128-bit AES Encryption and Decryption------------------")
+    print_main_header()
     print("1. Encrypt")
     print("2. Decrypt")
     print("3. Brute-force")
     print("4. Show saved data")
     print("5. Clear saved data")
     print("6. Exit")
+    print_long_line()
     choice = input("Enter your choice: ")
+    print_long_line()
     if choice == "1":
         plain_text = input("Enter the plain text to be encrypted: ")
-        key = input("\nEnter a 128-bit key: ")
+        key = input("Enter a 128-bit key: ")
         cipher = encrypt(plain_text, key)
-        print("\nCiphered text (Copied to clipboard):\n", cipher)
+        print_long_line()
+        print("Ciphered text (Copied to clipboard):", cipher)
+        print_long_line()
+    
     elif choice == "2":
         cipher = input("Enter the cipher text to be decrypted: ")
-        key = input("\nEnter the 128-bit key used for encryption: ")
+        key = input("Enter the 128-bit key used for encryption: ")
         decipher = decrypt(cipher, key)
-        print("\nDeciphered text: \n", decipher)
+        print()
+        print_long_line()
+        print("Deciphered text:", decipher)
+        print_long_line()
+
     elif choice == "3":
         cipher = input("Enter the cipher text to be brute-forced: ")
         have = input("Do you have any idea about the plain text? (y/n): ")

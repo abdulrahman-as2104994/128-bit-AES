@@ -672,7 +672,7 @@ def decrypt(cipher, key):
         for i in range(4):
             for j in range(4):
                 deciphered_text += chr(int(deciphered_block[i][j], 16))
-    print("\nDeciphered text with padding:\n", deciphered_text)
+    print("\nDeciphered text with padding:\n", repr(deciphered_text))
     deciphered_text = removePadding(deciphered_text)
 
     return deciphered_text
@@ -740,14 +740,9 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
 
             if plain_text != "":
                 if deciphered_text == plain_text:
+
+                    # Convert the key to ASCII
                     key = hexkey_to_char(hexKey)
-                    print("-----------------------------------------------------------------------------------------")
-                    print("Key found:", hexKey)
-                    print("Key in ASCII:", key)
-                    print("Iterations:", binary)
-                    print("Deciphered text:", deciphered_text)
-                    print("Plain text:", plain_text)
-                    print("-----------------------------------------------------------------------------------------")
 
                     # Save to broken ciphers
                     write_json({"cipher": cipher, "key": key, "hexKey": hexKey, "plainText": deciphered_text}, "brokenCiphers")
@@ -759,7 +754,15 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
                     # Remove the cipher from lastTriedBinary
                     remove_key_history(cipher)
 
+                    print("-----------------------------------------------------------------------------------------")
+                    print("Key found:", hexKey)
+                    print("Key in ASCII:", key)
+                    print("Iterations:", binary)
+                    print("Deciphered text:", deciphered_text)
+                    print("Plain text:", plain_text)
+                    print("-----------------------------------------------------------------------------------------")
                     input("Press enter to continue...")
+
                     return
                     
             elif bytes(deciphered_text, "utf-8").isascii():
