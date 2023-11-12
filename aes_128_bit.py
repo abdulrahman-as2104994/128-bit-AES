@@ -1,6 +1,5 @@
 import json
 import math
-import sys
 import time
 import clipboard
 import tabulate as tb
@@ -207,7 +206,6 @@ def show_broken_ciphers():
         print("Cipher:", borkenCipher["cipher"])
         print("Key in ASCII:", borkenCipher["key"])
         print("Deciphered text:", borkenCipher["plainText"])
-        print_short_line()
 
 def show_candidate_plain_texts():
     candidateCiphers = read_json("broken.json")["candidateCiphers"]
@@ -221,7 +219,7 @@ def show_candidate_plain_texts():
         print("Cipher:", candidateCipher["cipher"])
         print("Key in ASCII:", candidateCipher["key"])
         print("Deciphered text:", candidateCipher["plainText"])
-        print_short_line()
+
 
 def show_used_keys_history():
     ciphers = read_json("lastTriedBinary.json")["ciphers"]
@@ -979,8 +977,6 @@ def generate_subkeys_noprint(KHexList):
             for k in range(4):
                 nextCol.append(hex(int(all_sub_keys_columns[i-2+j][k], 16) ^ int(all_sub_keys_columns[i+j+1][k], 16)))
 
-        new_subkeys = all_sub_keys_columns[i+1:i+5]
-
         round_number += 1
 
     return all_sub_keys_columns
@@ -1243,3 +1239,6 @@ def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
                 else:
                     save_last_used_binary(cipher, binary)
                     return
+                
+
+
